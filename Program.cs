@@ -12,6 +12,7 @@ services.AddControllers(options =>
 {
 	options.ReturnHttpNotAcceptable = true;
 }).AddXmlDataContractSerializerFormatters();
+services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
 services.AddEndpointsApiExplorer();
 services.AddSwaggerGen();
