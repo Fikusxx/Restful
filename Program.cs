@@ -8,7 +8,11 @@ var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 var services = builder.Services;
 
-services.AddControllers();
+services.AddControllers(options =>
+{
+	options.ReturnHttpNotAcceptable = true;
+}).AddXmlDataContractSerializerFormatters();
+
 services.AddEndpointsApiExplorer();
 services.AddSwaggerGen();
 
@@ -29,9 +33,9 @@ if (app.Environment.IsDevelopment())
 	app.UseDeveloperExceptionPage();
 }
 
-//app.UseRouting();
+app.UseRouting();
 app.UseAuthorization();
 
-app.MapControllers();
+app.MapDefaultControllerRoute();
 
 app.Run();
