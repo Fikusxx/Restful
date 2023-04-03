@@ -15,5 +15,7 @@ public class AuthorProfile : Profile
 			.ForMember(authorDTO => authorDTO.Age,
 				options => options.MapFrom(author => author.DateOfBirth.GetCurrentAge()))
 			.ReverseMap();
+
+		CreateMap<Author, CreateAuthorDTO>().ReverseMap();
 	}
 }

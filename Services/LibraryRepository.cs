@@ -1,5 +1,6 @@
 ﻿using Library.API.DbContexts;
 using Library.API.Entities;
+using Library.Resources;
 
 namespace Library.API.Services;
 
@@ -23,6 +24,7 @@ public class LibraryRepository : ILibraryRepository, IDisposable
 		{
 			throw new ArgumentNullException(nameof(course));
 		}
+
 		// always set the AuthorId to the passed-in authorId
 		course.AuthorId = authorId;
 		_context.Courses.Add(course);
@@ -73,7 +75,6 @@ public class LibraryRepository : ILibraryRepository, IDisposable
 			throw new ArgumentNullException(nameof(author));
 		}
 
-		// the repository fills the id (instead of using identity columns)
 		author.Id = Guid.NewGuid();
 
 		foreach (var course in author.Courses)
@@ -117,6 +118,33 @@ public class LibraryRepository : ILibraryRepository, IDisposable
 	public IEnumerable<Author> GetAuthors()
 	{
 		return _context.Authors.ToList<Author>();
+	}
+
+	public IEnumerable<Author> GetAuthors(AuthorsResourceParameters parameters)
+	{
+		if (parameters == null)
+			throw new ArgumentNullException(nameof(parameters));
+
+		if (string.IsNullOrWhiteSpace(parameters.MainCategory) && string.IsNullOrWhiteSpace(parameters.SearchQuery))
+			return GetAuthors();
+
+		var collection = _context.Authors.AsQueryable();
+
+
+		if (string.IsNullOrWhiteSpace(parameters.MainCategory) == false)
+		{
+			var mainCategory = parameters.MainCategory.Trim();
+			collection = collection.Where(x => x.MainCategory == mainCategory);
+		}
+		if (string.IsNullOrWhiteSpace(parameters.SearchQuery) == false)
+		{
+			var searchQuery = parameters.SearchQuery.Trim();
+			collection = collection.Where(x => x.MainCategory.Contains(searchQuery)
+			|| x.FirstName.Contains(searchQuery)
+			|| x.LastName.Contains(searchQuery));
+		}
+
+		return collection.ToList();
 	}
 
 	public IEnumerable<Author> GetAuthors(IEnumerable<Guid> authorIds)

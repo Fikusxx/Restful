@@ -33,6 +33,17 @@ if (app.Environment.IsDevelopment())
 	app.UseSwaggerUI();
 	app.UseDeveloperExceptionPage();
 }
+else
+{
+	app.UseExceptionHandler(builder =>
+	{
+		builder.Run(async context =>
+		{
+			context.Response.StatusCode = 500;
+			await context.Response.WriteAsync("An error occured, sorry ^_^");
+		});
+	});
+}
 
 app.UseRouting();
 app.UseAuthorization();

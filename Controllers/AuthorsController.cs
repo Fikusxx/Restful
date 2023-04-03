@@ -1,12 +1,14 @@
 ﻿using AutoMapper;
+using Library.API.Entities;
 using Library.API.Services;
 using Library.Models;
+using Library.Resources;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Library.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/authors")]
 public class AuthorsController : ControllerBase
 {
 	private readonly IMapper mapper;
@@ -19,9 +21,10 @@ public class AuthorsController : ControllerBase
 	}
 
 	[HttpGet]
-	public ActionResult<IEnumerable<AuthorDTO>> GetAll()
+	[HttpHead]
+	public ActionResult<IEnumerable<AuthorDTO>> GetAuthors([FromQuery] AuthorsResourceParameters parameters)
 	{
-		var authors = libraryRepository.GetAuthors().ToList();
+		var authors = libraryRepository.GetAuthors(parameters).ToList();
 		var authorsDTO = mapper.Map<List<AuthorDTO>>(authors);
 		
 		return Ok(authorsDTO);
@@ -36,8 +39,20 @@ public class AuthorsController : ControllerBase
 		if (author == null)
 			return NotFound(new { IsSuccess = false, Message = nameof(authorId) + " doesnt exist" });
 
-		var authorDTO = mapper.Map<AuthorDTO>(author);
+		var authorDTO = mapper.Map<AuthorDTO>(author); 
 
 		return Ok(authorDTO);
+	}
+
+	[HttpPost]
+	public ActionResult<AuthorDTO> CreateAuthor(CreateAuthorDTO authorDTO)
+	{
+		var author = mapper.Map<Author>(authorDTO);
+		libraryRepository.AddAuthor(author);
+		libraryRepository.Save();
+
+		var authorToReturn = mapper.Map<AuthorDTO>(author);
+		
+		return CreatedAtAction(nameof(GetById), new { authorId = authorToReturn.Id }, authorToReturn);
 	}
 }
