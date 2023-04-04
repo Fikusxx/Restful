@@ -130,12 +130,12 @@ public class LibraryRepository : ILibraryRepository, IDisposable
 
 		var collection = _context.Authors.AsQueryable();
 
-
 		if (string.IsNullOrWhiteSpace(parameters.MainCategory) == false)
 		{
 			var mainCategory = parameters.MainCategory.Trim();
 			collection = collection.Where(x => x.MainCategory == mainCategory);
 		}
+
 		if (string.IsNullOrWhiteSpace(parameters.SearchQuery) == false)
 		{
 			var searchQuery = parameters.SearchQuery.Trim();

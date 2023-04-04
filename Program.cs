@@ -1,5 +1,6 @@
 using Library.API.DbContexts;
 using Library.API.Services;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 
@@ -11,7 +12,29 @@ var services = builder.Services;
 services.AddControllers(options =>
 {
 	options.ReturnHttpNotAcceptable = true;
-}).AddXmlDataContractSerializerFormatters();
+}).AddXmlDataContractSerializerFormatters()
+.ConfigureApiBehaviorOptions(options =>
+{
+	options.InvalidModelStateResponseFactory = context =>
+	{
+		var problemDetails = new ValidationProblemDetails(context.ModelState)
+		{
+			Type = "https://library.com/modelvalidationproblem",
+			Title = "One or more validation errors occured",
+			Status = StatusCodes.Status422UnprocessableEntity,
+			Detail = "See the errors property or details",
+			Instance = context.HttpContext.Request.Path
+		};
+
+		problemDetails.Extensions.Add("traceId", context.HttpContext.TraceIdentifier);
+
+		return new UnprocessableEntityObjectResult(problemDetails)
+		{
+			ContentTypes = { "application/json" }
+		};
+	};
+});
+
 services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
 services.AddEndpointsApiExplorer();
