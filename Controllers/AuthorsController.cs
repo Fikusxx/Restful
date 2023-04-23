@@ -4,10 +4,10 @@ using Library.API.Services;
 using Library.Helpers;
 using Library.Models;
 using Library.Resources;
+using Library.Services;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using OfficeOpenXml;
-using System.Text.Json;
 
 namespace Library.Controllers;
 
@@ -17,18 +17,24 @@ public class AuthorsController : ControllerBase
 {
 	private readonly IMapper mapper;
 	private readonly ILibraryRepository libraryRepository;
+	private readonly IPropertyMappingService propertyMappingService;
 
-	public AuthorsController(ILibraryRepository libraryRepository, IMapper mapper)
+	public AuthorsController(ILibraryRepository libraryRepository, IMapper mapper, IPropertyMappingService propertyMappingService)
 	{
 		this.libraryRepository = libraryRepository;
 		this.mapper = mapper;
+		this.propertyMappingService = propertyMappingService;
 	}
 
 	[HttpGet]
 	[HttpHead]
 	public ActionResult<IEnumerable<AuthorDTO>> GetAuthors([FromQuery] AuthorsResourceParameters parameters)
 	{
+		if (propertyMappingService.ValidMappingExistsFor<AuthorDTO, Author>(parameters.OrderBy) == false)
+			return BadRequest();
+
 		var authors = libraryRepository.GetAuthors(parameters);
+
 		var paginationMetaData = new
 		{
 			totalItemsCount = authors.TotalCount,
@@ -143,26 +149,30 @@ public class AuthorsController : ControllerBase
 
 	private string CreateAuthorsResourceUri(AuthorsResourceParameters parameters, ResourceUriType type)
 	{
+		HttpContext.Request.RouteValues.TryGetValue("action", out var value);
+
 		switch (type)
 		{
 			case ResourceUriType.PreviousPage:
-				return Url.ActionLink(nameof(GetAuthors),
+				return Url.ActionLink(value?.ToString(),
 					values: new
 					{
 						pageNumber = parameters.PageNumber - 1,
 						pageSize = parameters.PageSize,
 						mainCategory = parameters.MainCategory,
-						searchQuery = parameters.SearchQuery
+						searchQuery = parameters.SearchQuery,
+						orderBy = parameters.OrderBy
 					})!;
 
 			case ResourceUriType.NextPage:
-				return Url.ActionLink(nameof(GetAuthors),
+				return Url.ActionLink(value?.ToString(),
 					values: new
 					{
 						pageNumber = parameters.PageNumber + 1,
 						pageSize = parameters.PageSize,
 						mainCategory = parameters.MainCategory,
-						searchQuery = parameters.SearchQuery
+						searchQuery = parameters.SearchQuery,
+						orderBy = parameters.OrderBy
 					})!;
 
 			default:
@@ -172,7 +182,8 @@ public class AuthorsController : ControllerBase
 						pageNumber = parameters.PageNumber,
 						pageSize = parameters.PageSize,
 						mainCategory = parameters.MainCategory,
-						searchQuery = parameters.SearchQuery
+						searchQuery = parameters.SearchQuery,
+						orderBy = parameters.OrderBy
 					})!;
 		}
 	}

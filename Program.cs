@@ -1,5 +1,6 @@
 using Library.API.DbContexts;
 using Library.API.Services;
+using Library.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json.Serialization;
@@ -45,6 +46,7 @@ services.AddEndpointsApiExplorer();
 services.AddSwaggerGen();
 
 services.AddScoped<ILibraryRepository, LibraryRepository>();
+services.AddTransient<IPropertyMappingService, PropertyMappingService>();
 
 services.AddDbContext<LibraryContext>(options =>
 {
