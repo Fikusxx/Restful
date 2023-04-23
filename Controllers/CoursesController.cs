@@ -2,7 +2,11 @@
 using Library.API.Entities;
 using Library.API.Services;
 using Library.Models;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.Extensions.Options;
 
 namespace Library.Controllers;
 
@@ -61,5 +65,80 @@ public class CoursesController : ControllerBase
 		var courseToReturn = mapper.Map<CourseDTO>(courseToAdd);
 
 		return CreatedAtAction(nameof(GetCourseForAuthor), new { authorId = authorId, courseId = courseToAdd.Id }, courseToReturn);
+	}
+
+	[HttpPut]
+	[Route("{courseId}")]
+	public IActionResult UpdateCourseForAuthor(Guid authorId, Guid courseId, UpdateCourseDTO updateCourseDTO)
+	{
+		if (libraryRepository.AuthorExists(authorId) == false)
+			return NotFound("Author doesnt exist");
+
+		var course = libraryRepository.GetCourse(authorId, courseId);
+
+		if (course == null)
+		{
+			course = mapper.Map<Course>(updateCourseDTO);
+			course.Id = courseId;
+			libraryRepository.AddCourse(authorId, course);
+			libraryRepository.Save();
+
+			return CreatedAtAction(nameof(GetCourseForAuthor), new { authorId = authorId, courseId = course.Id }, course);
+		}
+
+		mapper.Map(updateCourseDTO, course);
+		libraryRepository.UpdateCourse(course); // no implementation
+		libraryRepository.Save();
+
+		return NoContent();
+	}
+
+	[HttpPatch]
+	[Route("{courseId}")]
+	public IActionResult PartiallyUpdateCourseForAuthor(Guid authorId, Guid courseId, JsonPatchDocument<UpdateCourseDTO> patch)
+	{
+		if (libraryRepository.AuthorExists(authorId) == false)
+			return NotFound("Author doesnt exist");
+
+		var course = libraryRepository.GetCourse(authorId, courseId);
+
+		if (course == null)
+			return NotFound("Course doesnt exist");
+
+		var courseToPatch = mapper.Map<UpdateCourseDTO>(course);
+		patch.ApplyTo(courseToPatch, ModelState);
+
+		if (TryValidateModel(courseToPatch) == false)
+		{
+			return ValidationProblem(ModelState);
+		}
+	
+		mapper.Map(courseToPatch, course);
+		libraryRepository.UpdateCourse(course); // no implementation
+		libraryRepository.Save();
+
+		return NoContent();
+	}
+
+	[HttpDelete]
+	[Route("{courseId}")]
+	public IActionResult DeleteCourseForAuthor(Guid authorId, Guid courseId)
+	{
+		var course = libraryRepository.GetCourse(authorId, courseId);
+
+		if (course == null)
+			return NotFound("Course doesnt exist");
+
+		libraryRepository.DeleteCourse(course);
+		libraryRepository.Save();
+
+		return NoContent();	
+	}
+
+	public override ActionResult ValidationProblem([ActionResultObjectValue] ModelStateDictionary modelStateDictionary)
+	{
+		var options = HttpContext.RequestServices.GetRequiredService<IOptions<ApiBehaviorOptions>>().Value;
+
+		return (ActionResult)options.InvalidModelStateResponseFactory(ControllerContext);
 	}
 }

@@ -1,4 +1,5 @@
 ﻿using Library.API.Entities;
+using Library.Helpers;
 using Library.Resources;
 
 namespace Library.API.Services;
@@ -13,7 +14,7 @@ public interface ILibraryRepository
 	IEnumerable<Author> GetAuthors();
 	Author GetAuthor(Guid authorId);
 	IEnumerable<Author> GetAuthors(IEnumerable<Guid> authorIds);
-	IEnumerable<Author> GetAuthors(AuthorsResourceParameters parameters);
+	PagedList<Author> GetAuthors(AuthorsResourceParameters parameters);
 
 	void AddAuthor(Author author);
 	void DeleteAuthor(Author author);

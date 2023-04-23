@@ -1,5 +1,6 @@
 ﻿using Library.API.DbContexts;
 using Library.API.Entities;
+using Library.Helpers;
 using Library.Resources;
 
 namespace Library.API.Services;
@@ -48,7 +49,7 @@ public class LibraryRepository : ILibraryRepository, IDisposable
 		}
 
 		return _context.Courses
-		  .Where(c => c.AuthorId == authorId && c.Id == courseId).FirstOrDefault();
+		  .FirstOrDefault(c => c.AuthorId == authorId && c.Id == courseId);
 	}
 
 	public IEnumerable<Course> GetCourses(Guid authorId)
@@ -120,13 +121,10 @@ public class LibraryRepository : ILibraryRepository, IDisposable
 		return _context.Authors.ToList<Author>();
 	}
 
-	public IEnumerable<Author> GetAuthors(AuthorsResourceParameters parameters)
+	public PagedList<Author> GetAuthors(AuthorsResourceParameters parameters)
 	{
 		if (parameters == null)
 			throw new ArgumentNullException(nameof(parameters));
-
-		if (string.IsNullOrWhiteSpace(parameters.MainCategory) && string.IsNullOrWhiteSpace(parameters.SearchQuery))
-			return GetAuthors();
 
 		var collection = _context.Authors.AsQueryable();
 
@@ -144,7 +142,7 @@ public class LibraryRepository : ILibraryRepository, IDisposable
 			|| x.LastName.Contains(searchQuery));
 		}
 
-		return collection.ToList();
+		return PagedList<Author>.ToPagedList(collection, parameters.PageNumber, parameters.PageSize);
 	}
 
 	public IEnumerable<Author> GetAuthors(IEnumerable<Guid> authorIds)
