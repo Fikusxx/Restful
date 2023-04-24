@@ -1,5 +1,6 @@
 using Library.API.DbContexts;
 using Library.API.Services;
+using Library.Helpers;
 using Library.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +10,18 @@ var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 var services = builder.Services;
 
+
+services.AddHttpCacheHeaders(
+	expiration =>
+{
+	expiration.MaxAge = 100;
+	expiration.CacheLocation = Marvin.Cache.Headers.CacheLocation.Public;
+},
+	validation =>
+{
+	validation.MustRevalidate = true;
+});
+services.AddResponseCaching();
 services.AddControllers(options =>
 {
 	options.ReturnHttpNotAcceptable = true;
@@ -75,6 +88,8 @@ else
 	});
 }
 
+//app.UseResponseCaching();
+app.UseHttpCacheHeaders();
 app.UseRouting();
 app.UseAuthorization();
 

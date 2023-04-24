@@ -23,7 +23,7 @@ public class CoursesController : ControllerBase
 		this.mapper = mapper;
 	}
 
-	[HttpGet]
+	[HttpGet(Name = "GetCoursesForAuthor")]
 	public ActionResult<IEnumerable<CourseDTO>> GetCoursesForAuthor(Guid authorId)
 	{
 		if (libraryRepository.AuthorExists(authorId) == false)
@@ -52,7 +52,7 @@ public class CoursesController : ControllerBase
 		return Ok(courseDto);
 	}
 
-	[HttpPost]
+	[HttpPost(Name = "CreateCourse")]
 	public ActionResult<CourseDTO> CreateCourse(Guid authorId, CreateCourseDTO course)
 	{
 		if (libraryRepository.AuthorExists(authorId) == false)
@@ -112,7 +112,7 @@ public class CoursesController : ControllerBase
 		{
 			return ValidationProblem(ModelState);
 		}
-	
+
 		mapper.Map(courseToPatch, course);
 		libraryRepository.UpdateCourse(course); // no implementation
 		libraryRepository.Save();
@@ -132,7 +132,7 @@ public class CoursesController : ControllerBase
 		libraryRepository.DeleteCourse(course);
 		libraryRepository.Save();
 
-		return NoContent();	
+		return NoContent();
 	}
 
 	public override ActionResult ValidationProblem([ActionResultObjectValue] ModelStateDictionary modelStateDictionary)

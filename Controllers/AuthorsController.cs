@@ -36,6 +36,9 @@ public class AuthorsController : ControllerBase
 		if (propertyMappingService.ValidMappingExistsFor<AuthorDTO, Author>(parameters.OrderBy) == false)
 			return BadRequest();
 
+		if (propertyCheckerService.TypeHasProperties<AuthorDTO>(parameters.Fields) == false)
+			return BadRequest();
+
 		var authors = libraryRepository.GetAuthors(parameters);
 
 		var paginationMetaData = new
@@ -55,14 +58,19 @@ public class AuthorsController : ControllerBase
 
 	[HttpGet]
 	[Route("{authorId}")]
-	public IActionResult GetById(Guid authorId, string fields)
+	public IActionResult GetById(Guid authorId, string? fields)
 	{
+		if (propertyCheckerService.TypeHasProperties<AuthorDTO>(fields) == false)
+			return BadRequest();
+
 		var author = libraryRepository.GetAuthor(authorId);
 
 		if (author == null)
 			return NotFound(new { IsSuccess = false, Message = nameof(authorId) + " doesnt exist" });
 
+		var links = CreateLinksForAuthor(authorId, fields);
 		var authorDTO = mapper.Map<AuthorDTO>(author).ShapeData(fields);
+		authorDTO.TryAdd("links", links);
 
 		return Ok(authorDTO);
 	}
@@ -192,6 +200,26 @@ public class AuthorsController : ControllerBase
 						fields = parameters.Fields
 					})!;
 		}
+	}
+
+	private IEnumerable<LinkDTO> CreateLinksForAuthor(Guid authorId, string fields)
+	{
+		var links = new List<LinkDTO>();
+
+		if (string.IsNullOrWhiteSpace(fields))
+		{
+			links.Add(new LinkDTO(Url.ActionLink(nameof(GetById), values: new { authorId })!, "self", "GET"));
+		}
+		else
+		{
+			links.Add(new LinkDTO(Url.ActionLink(nameof(GetById), values: new { authorId, fields })!, "self", "GET"));
+		}
+
+		links.Add(new LinkDTO(Url.ActionLink(nameof(DeleteAuthor), values: new { authorId })!, "delete_author", "DELETE"));
+		links.Add(new LinkDTO(Url.Link("CreateCourse", values: new { authorId })!, "create_course_for_author", "POST"));
+		links.Add(new LinkDTO(Url.Link("GetCoursesForAuthor", values: new { authorId })!, "courses", "GET"));
+
+		return links;
 	}
 }
 
