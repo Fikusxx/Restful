@@ -47,6 +47,7 @@ services.AddSwaggerGen();
 
 services.AddScoped<ILibraryRepository, LibraryRepository>();
 services.AddTransient<IPropertyMappingService, PropertyMappingService>();
+services.AddTransient<IPropertyCheckerService, PropertyCheckerService>();
 
 services.AddDbContext<LibraryContext>(options =>
 {

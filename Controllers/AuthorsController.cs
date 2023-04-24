@@ -18,17 +18,20 @@ public class AuthorsController : ControllerBase
 	private readonly IMapper mapper;
 	private readonly ILibraryRepository libraryRepository;
 	private readonly IPropertyMappingService propertyMappingService;
+	private readonly IPropertyCheckerService propertyCheckerService;
 
-	public AuthorsController(ILibraryRepository libraryRepository, IMapper mapper, IPropertyMappingService propertyMappingService)
+	public AuthorsController(ILibraryRepository libraryRepository, IMapper mapper
+		, IPropertyMappingService propertyMappingService, IPropertyCheckerService propertyCheckerService)
 	{
 		this.libraryRepository = libraryRepository;
 		this.mapper = mapper;
 		this.propertyMappingService = propertyMappingService;
+		this.propertyCheckerService = propertyCheckerService;
 	}
 
 	[HttpGet]
 	[HttpHead]
-	public ActionResult<IEnumerable<AuthorDTO>> GetAuthors([FromQuery] AuthorsResourceParameters parameters)
+	public IActionResult GetAuthors([FromQuery] AuthorsResourceParameters parameters)
 	{
 		if (propertyMappingService.ValidMappingExistsFor<AuthorDTO, Author>(parameters.OrderBy) == false)
 			return BadRequest();
@@ -45,21 +48,21 @@ public class AuthorsController : ControllerBase
 			nextPage = authors.HasNext ? CreateAuthorsResourceUri(parameters, ResourceUriType.NextPage) : null
 		};
 		HttpContext.Response.Headers.Add("X-Pagination", JsonConvert.SerializeObject(paginationMetaData));
-		var authorsDTO = mapper.Map<List<AuthorDTO>>(authors);
+		var authorsDTO = mapper.Map<List<AuthorDTO>>(authors).ShapeData<AuthorDTO>(parameters.Fields);
 
 		return Ok(authorsDTO);
 	}
 
 	[HttpGet]
 	[Route("{authorId}")]
-	public ActionResult<AuthorDTO> GetById(Guid authorId)
+	public IActionResult GetById(Guid authorId, string fields)
 	{
 		var author = libraryRepository.GetAuthor(authorId);
 
 		if (author == null)
 			return NotFound(new { IsSuccess = false, Message = nameof(authorId) + " doesnt exist" });
 
-		var authorDTO = mapper.Map<AuthorDTO>(author);
+		var authorDTO = mapper.Map<AuthorDTO>(author).ShapeData(fields);
 
 		return Ok(authorDTO);
 	}
@@ -161,7 +164,8 @@ public class AuthorsController : ControllerBase
 						pageSize = parameters.PageSize,
 						mainCategory = parameters.MainCategory,
 						searchQuery = parameters.SearchQuery,
-						orderBy = parameters.OrderBy
+						orderBy = parameters.OrderBy,
+						fields = parameters.Fields
 					})!;
 
 			case ResourceUriType.NextPage:
@@ -172,7 +176,8 @@ public class AuthorsController : ControllerBase
 						pageSize = parameters.PageSize,
 						mainCategory = parameters.MainCategory,
 						searchQuery = parameters.SearchQuery,
-						orderBy = parameters.OrderBy
+						orderBy = parameters.OrderBy,
+						fields = parameters.Fields
 					})!;
 
 			default:
@@ -183,7 +188,8 @@ public class AuthorsController : ControllerBase
 						pageSize = parameters.PageSize,
 						mainCategory = parameters.MainCategory,
 						searchQuery = parameters.SearchQuery,
-						orderBy = parameters.OrderBy
+						orderBy = parameters.OrderBy,
+						fields = parameters.Fields
 					})!;
 		}
 	}

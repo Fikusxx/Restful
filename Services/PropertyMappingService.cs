@@ -5,7 +5,7 @@ namespace Library.Services;
 
 public class PropertyMappingService : IPropertyMappingService
 {
-	// Can add lazy init to avoid initializing this on creating
+	// Can add lazy init to avoid initializing on creating
 	private Dictionary<string, PropertyMappingValue> authorProperties =
 		new Dictionary<string, PropertyMappingValue>(StringComparer.OrdinalIgnoreCase) // ignore lower / capital casing
 	{

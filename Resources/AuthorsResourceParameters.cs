@@ -18,4 +18,5 @@ public class ResourseParameters
 		set => pageSize = (value > MaxPageSize) ? MaxPageSize : value;
 	}
 	public string OrderBy { get; set; } = "";
+	public string Fields { get; set; } = "";
 }

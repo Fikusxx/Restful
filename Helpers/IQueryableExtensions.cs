@@ -36,8 +36,8 @@ public static class IQueryableExtensions
 			var propertyName = indexOfFirstSpace == -1 ? trimmedOrderByClause : trimmedOrderByClause.Remove(indexOfFirstSpace);
 
 			// if there's not any matching property in the provided dict
-			//if (mappingDictionary.ContainsKey(propertyName) == false)
-			//	throw new ArgumentException($"Key mapping for {propertyName} is missing");
+			if (mappingDictionary.ContainsKey(propertyName) == false)
+				throw new ArgumentException($"Key mapping for {propertyName} is missing");
 
 			var propertyMappingValue = mappingDictionary[propertyName];
 
