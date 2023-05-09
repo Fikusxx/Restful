@@ -1,4 +1,5 @@
 ﻿using Library.API.Entities;
+using Library.Background;
 using Microsoft.EntityFrameworkCore;
 
 namespace Library.API.DbContexts;
@@ -10,6 +11,7 @@ public class LibraryContext : DbContext
 
 	public DbSet<Author> Authors { get; set; } = null!;
 	public DbSet<Course> Courses { get; set; } = null!;
+	public DbSet<Person> Persons { get; set; } = null!;
 
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
