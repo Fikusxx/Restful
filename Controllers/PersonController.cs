@@ -18,13 +18,13 @@ public class PersonController : ControllerBase
 		this.backgroundJobClient = backgroundJobClient;
     }
 
-    [HttpPost]
-	[Route("{personName}")]
-	public IActionResult Enqueue(string personName)
-	{
-		backgroundJobClient.Enqueue(() => Test(personName));
-		return Ok();
-	}
+ //   [HttpPost]
+	//[Route("{personName}")]
+	//public IActionResult Enqueue(string personName)
+	//{
+	//	backgroundJobClient.Enqueue(() => Test(personName));
+	//	return Ok();
+	//}
 
 	[HttpPost]
 	[Route("schedule/{personName}")]
@@ -34,9 +34,9 @@ public class PersonController : ControllerBase
 		return Ok();
 	}
 
-	public async Task Test(string name)
-	{
-		await Task.Delay(100000);
-		Console.WriteLine(name);
-	}
+	//public async Task Test(string name)
+	//{
+	//	await Task.Delay(100000);
+	//	Console.WriteLine(name);
+	//}
 }

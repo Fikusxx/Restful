@@ -3,10 +3,18 @@ using HangfireBasicAuthenticationFilter;
 using Library.API.DbContexts;
 using Library.API.Services;
 using Library.Background;
+using Library.Caching;
 using Library.Services;
+using MediatR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json.Serialization;
+using StackExchange.Redis;
+using System;
+using System.Reflection;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
@@ -86,11 +94,58 @@ services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
 services.AddEndpointsApiExplorer();
 services.AddSwaggerGen();
+builder.Services.AddAuthorization();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+	.AddJwtBearer(options =>
+	{
+		options.TokenValidationParameters = new TokenValidationParameters
+		{
+			// указывает, будет ли валидироваться издатель при валидации токена
+			ValidateIssuer = true,
+			// строка, представляющая издателя
+			ValidIssuer = "ISSUER",
+			// будет ли валидироваться потребитель токена
+			ValidateAudience = true,
+			// установка потребителя токена
+			ValidAudience = "AUDIENCE",
+			// будет ли валидироваться время существования
+			ValidateLifetime = true,
+			// установка ключа безопасности
+			IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("AWJHDAHDOAHDOAWPDHOAPWHDOAWdHOAAWDHO")),
+			// валидация ключа безопасности
+			ValidateIssuerSigningKey = true,
+		};
+	});
 
 services.AddScoped<ILibraryRepository, LibraryRepository>();
 services.AddTransient<IPropertyMappingService, PropertyMappingService>();
 services.AddTransient<IPropertyCheckerService, PropertyCheckerService>();
 services.AddTransient<ITimeService, TimeService>();
+services.AddScoped<ICacheService, CacheService>();
+services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer
+	.Connect("redis-10599.c239.us-east-1-2.ec2.cloud.redislabs.com:10599,password=oWLCpWVKhlUaAecUq3CPFMgULKQuS7K8"));
+
+services.AddMediatR(opt => opt.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+services.AddTransient(typeof(IPipelineBehavior<,>), typeof(CachingBehaviour<,>));
+
+var openGenericType = typeof(ICachingService<,>);
+Assembly.GetExecutingAssembly().GetTypes()
+	.Where(x => x.IsAbstract == false && x.IsGenericTypeDefinition == false)
+	.ToList()
+	.ForEach(type =>
+{
+	var interfaces = type.GetInterfaces();
+	var genericInterfaces = interfaces.Where(x => x.IsGenericType && x.GetGenericTypeDefinition() == openGenericType);
+	var matchingInterface = genericInterfaces.FirstOrDefault();
+
+	if (matchingInterface != null)
+	{
+		builder.Services.AddTransient(matchingInterface, type);
+	}
+});
+services.AddHttpContextAccessor();
+
+
 
 services.AddDbContext<LibraryContext>(options =>
 {
@@ -121,6 +176,7 @@ else
 //app.UseResponseCaching();
 //app.UseHttpCacheHeaders();
 app.UseRouting();
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseHangfireDashboard("/hangfire", new DashboardOptions()

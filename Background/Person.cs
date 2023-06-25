@@ -2,8 +2,26 @@
 
 namespace Library.Background;
 
-public class Person
+
+public interface IBaseEntity
 {
+	public int Id { get; set; }
+
+	public DateTime LastModified { get; set; }
+}
+public class BaseEntity
+{
+	public int Id { get; set; }
+	
+	public DateTime LastModified { get; set; }
+}
+
+public class Person : IBaseEntity
+{
+	public int Id { get; set; }
+
+	public DateTime LastModified { get; set; }
+
 	[Required]
 	public string Name { get; set; } = "";
 

@@ -1,13 +1,16 @@
 ﻿using AutoMapper;
 using Library.API.Entities;
 using Library.API.Services;
+using Library.Background;
+using Library.Caching;
+using Library.Filters;
 using Library.Helpers;
 using Library.Models;
 using Library.Resources;
 using Library.Services;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
-using OfficeOpenXml;
 
 namespace Library.Controllers;
 
@@ -19,15 +22,87 @@ public class AuthorsController : ControllerBase
 	private readonly ILibraryRepository libraryRepository;
 	private readonly IPropertyMappingService propertyMappingService;
 	private readonly IPropertyCheckerService propertyCheckerService;
+	private readonly ICacheService cacheService;
+	private static List<Person> persons = new();
+	private readonly IMediator mediator;
 
 	public AuthorsController(ILibraryRepository libraryRepository, IMapper mapper
-		, IPropertyMappingService propertyMappingService, IPropertyCheckerService propertyCheckerService)
+		, IPropertyMappingService propertyMappingService, IPropertyCheckerService propertyCheckerService,
+		ICacheService cacheService,
+		IMediator mediator)
 	{
 		this.libraryRepository = libraryRepository;
 		this.mapper = mapper;
 		this.propertyMappingService = propertyMappingService;
 		this.propertyCheckerService = propertyCheckerService;
+		this.cacheService = cacheService;
+		this.mediator = mediator;
+		persons.Add(new Person() { Id = 1, Name = "Fikus", Age = 25, LastModified = new DateTime(ticks: 638232661032996201) });
 	}
+
+	[HttpGet]
+	[ETagFilter]
+	[Route("etag")]
+	public IActionResult Etag()
+	{
+		var person = persons.FirstOrDefault();
+
+		//return Ok();
+		//return Ok(new Author());
+		return Ok(persons);
+	}
+
+	[HttpGet]
+	[Route("caching-test")]
+	public async Task<IActionResult> CachingTest()
+	{
+		var query = new GetAuthorsQuery() { Id = Guid.NewGuid()};
+		var data = await mediator.Send(query);
+
+		return Ok(data);
+	}
+
+	[HttpGet]
+	[Route("cache")]
+	public IActionResult Get()
+	{
+		//var kekw = test.GetData(new GetAuthorsQuery() { Id = Guid.NewGuid() });
+		var data = cacheService.GetData<Author>("author#1");
+
+		if (data != null)
+			return Ok(data);
+
+		data = new Author { Id = Guid.NewGuid(), FirstName = "Fikus", LastName = "Garrosh", DateOfBirth = DateTimeOffset.UtcNow, MainCategory = "IT" };
+		cacheService.SetData<Author>("author#1", data, DateTimeOffset.UtcNow.AddMinutes(10));
+
+		return Ok(data);
+
+		//if (data == null)
+		//{
+		//	var author = new Author() { FirstName = "Fikus", LastName = "Skilled", DateOfBirth = DateTimeOffset.UtcNow, MainCategory = "IT" };
+		//	//var rnd = new { FirstName = "Fikus", LastName = "Skilled", DateOfBirth = DateTimeOffset.UtcNow, MainCategory = new List<int>() };
+		//	cacheService.SetData<Author>("author#1", author, DateTimeOffset.UtcNow.AddMinutes(10));
+		//	return Ok();
+		//}
+
+		//return Ok(data);
+	}
+
+	[HttpGet]
+	[Route("cache-all")]
+	public IActionResult GetAll()
+	{
+		var data = cacheService.GetData<IEnumerable<Author>>("authors");
+
+		if (data != null && data.Any())
+			return Ok(data);
+
+		data = libraryRepository.GetAuthors().ToList();
+		cacheService.SetData<IEnumerable<Author>>("authors", data, DateTimeOffset.UtcNow.AddMinutes(10));
+
+		return Ok(data);
+	}
+
 
 	[HttpGet]
 	[HttpHead]
@@ -76,6 +151,7 @@ public class AuthorsController : ControllerBase
 	}
 
 	[HttpPost]
+	[Route("save-www")]
 	public ActionResult<AuthorDTO> CreateAuthor(CreateAuthorDTO authorDTO)
 	{
 		var author = mapper.Map<Author>(authorDTO);
@@ -108,54 +184,6 @@ public class AuthorsController : ControllerBase
 		libraryRepository.Save();
 
 		return NoContent();
-	}
-
-	[HttpGet]
-	[Route("report")]
-	public IActionResult GetReport(IEnumerable<CallCenterRowReportExcel> rows)
-	{
-		var report = GetExcelReport(rows);
-		return Ok(report);
-	}
-
-	public byte[] GetExcelReport(IEnumerable<CallCenterRowReportExcel> rows)
-	{
-		ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
-		var file = new FileInfo(@"C:\report.xlsx");
-		//using var package = new ExcelPackage(new FileInfo("Report"));
-		using var package = new ExcelPackage(file);
-
-		var sheet = package.Workbook.Worksheets.Add("Report");
-		var rowReports = rows.ToArray().AsSpan();
-		var len = rowReports.Length;
-		var column = 1;
-		var currentRow = 1;
-
-		foreach (var rowReport in rowReports)
-		{
-			var row = currentRow;
-			sheet.Cells[row, column].Value = rowReport.Title;
-			rowReport.Values.ForEach(value =>
-			{
-				column++;
-				sheet.Cells[row, column].Value = value;
-			});
-			currentRow++;
-			column = 1;
-		}
-
-		// Styling
-		using ExcelRange firstRow = sheet.Cells["A1:Z1"];
-		firstRow.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-		firstRow.Style.Font.Bold = true;
-		firstRow.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
-		using ExcelRange firstColumn = sheet.Cells[$"A1:A{rowReports.Length}"];
-		firstColumn.Style.Font.Bold = true;
-		using ExcelRange lastRow = sheet.Cells[$"A{rowReports.Length}:Z{rowReports.Length}"];
-		lastRow.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-		lastRow.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
-
-		return package.GetAsByteArray();
 	}
 
 	private string CreateAuthorsResourceUri(AuthorsResourceParameters parameters, ResourceUriType type)
