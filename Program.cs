@@ -128,7 +128,7 @@ services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer
 services.AddMediatR(opt => opt.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 services.AddTransient(typeof(IPipelineBehavior<,>), typeof(CachingBehaviour<,>));
 
-var openGenericType = typeof(ICachingService<,>);
+var openGenericType = typeof(ICachingQueryService<,>);
 Assembly.GetExecutingAssembly().GetTypes()
 	.Where(x => x.IsAbstract == false && x.IsGenericTypeDefinition == false)
 	.ToList()

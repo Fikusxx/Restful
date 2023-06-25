@@ -8,32 +8,20 @@ public class GetAuthorsQuery : IRequest<AuthorDTO>
 	public Guid Id { get; set; }
 }
 
-public interface ICachingService<TRequest, TResponse>
+public interface ICachingCommandService<TRequest, TResponse>
+{
+	public void RemoveData(TRequest request);
+}
+
+public interface ICachingQueryService<TRequest, TResponse>
 {
 	public TResponse GetData(TRequest request);
 	public void SetData(TRequest request, TResponse response);
 }
 
-public abstract class BaseCachingService
+public class CachingService : ICachingQueryService<GetAuthorsQuery, AuthorDTO>
 {
-	protected readonly IHttpContextAccessor httpContextAccessor;
-
-	public BaseCachingService(IHttpContextAccessor httpContextAccessor)
-	{
-		this.httpContextAccessor = httpContextAccessor;
-	}
-
-	protected string GetIncomingETag()
-	{
-		var incomingEtag = httpContextAccessor.HttpContext!.Request.Headers.IfNoneMatch.ToString();
-
-		return incomingEtag;
-	}
-}
-
-public class CachingService : BaseCachingService, ICachingService<GetAuthorsQuery, AuthorDTO>
-{
-	public CachingService(IHttpContextAccessor httpContextAccessor) : base(httpContextAccessor)
+	public CachingService()
 	{ }
 
 	public AuthorDTO GetData(GetAuthorsQuery request)
@@ -46,35 +34,26 @@ public class CachingService : BaseCachingService, ICachingService<GetAuthorsQuer
 			return null;
 
 		// #3 if was was found
-		var incomingEtag = GetIncomingETag();
-		var cachedDataEtag = "";
-
-		// #1 CASE: if etag that has been sent is equal to a cached one
-		// #2 CASE: if user is getting data for the first time his session, thus his etag is abscent
-		// #3 CASE: data has been changed since his last fetch and his etag is an actual value
-		httpContextAccessor.HttpContext!.Response.Headers.ETag = cachedDataEtag; // refresh etag header
 		return cachedData;
 	}
 
 	public void SetData(GetAuthorsQuery request, AuthorDTO response) // add expiryTime
 	{
 		// #1 generate key & ETAG based on the request and response
-		var newEtag = "Newly Created ETag";
 		var key = "newKey";
 
 		// #2 store data + ETAG based on the response
 
 		// #3 set new etag
-		httpContextAccessor.HttpContext!.Response.Headers.ETag = newEtag;
 	}
 }
 
 public class CachingBehaviour<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse> where TRequest : IRequest<TResponse>
 {
-	private readonly IEnumerable<ICachingService<TRequest, TResponse>> services;
-	private readonly ICachingService<TRequest, TResponse>? service;
+	private readonly IEnumerable<ICachingQueryService<TRequest, TResponse>> services;
+	private readonly ICachingQueryService<TRequest, TResponse>? service;
 
-	public CachingBehaviour(IEnumerable<ICachingService<TRequest, TResponse>> services)
+	public CachingBehaviour(IEnumerable<ICachingQueryService<TRequest, TResponse>> services)
 	{
 		this.services = services;
 		this.service = services.FirstOrDefault();
